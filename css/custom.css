@@ -1,0 +1,69 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+
+html, body {
+    height: fit-content;
+    margin: 0;
+}
+
+body {
+    min-height: 100vh; 
+    display: flex;
+    flex-direction: column;
+}
+
+
+/* https://github.com/tailwindlabs/tailwindcss/discussions/5981 */
+.revert-tailwind {
+    all: initial;
+}
+
+.revert-tailwind>* {
+    all: revert;
+}
+
+
+
+.preview-container {
+    @apply bg-[#22272e];
+
+}
+
+.preview {
+    @apply bg-[#22272e] text-white;
+    @apply p-4;
+    @apply w-[1000px] min-w-[400px];
+    @apply leading-relaxed;
+
+
+    font-family: var(--font-geist-mono), sans-serif;
+
+}
+
+.preview code {
+    background: #2d333b;
+    padding: 3px;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+
+.preview a { 
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+
+.preview pre {
+    background-color: #2d333b; 
+}
+
+.line {
+    cursor: pointer;
+}
+
+.line:hover { 
+    background-color: red;
+}
+

