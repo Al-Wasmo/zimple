@@ -21,8 +21,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={`bg-[#22272e] ${geistSans.variable} ${geistMono.variable} antialiased`}>
-          {children} 
+      <body className={`bg-[#22272e] flex flex-col ${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <Nav />
+        <div className="mt-[64px] flex flex-col flex-1"> {children} </div>
       </body>
     </html>
   );

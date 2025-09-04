@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from 'next/dynamic';
+import { useParams } from "next/navigation";
 
 
 
@@ -12,17 +13,20 @@ import {
 import MarkdownEditor from "@/components/Editor";
 const Preview = dynamic(() => import('@/components/Preview'), { ssr: false });
 
-export default function Home() {
+export default function EditCreatePage() {
+
+
+
   return (
     <div className='flex-1 flex flex-col'>
 
       <ResizablePanelGroup direction="horizontal" className={"flex-1 flex h-full w-full"}>
-
+    
         <ResizablePanel>
           <MarkdownEditor />
         </ResizablePanel>
 
-        <ResizableHandle className={"bg-black w-[2px]"} />
+        <ResizableHandle className={"bg-black w-[1px]"} />
 
 
         <ResizablePanel defaultSize={60}>
@@ -36,6 +40,4 @@ export default function Home() {
 }
 
 
-// ability to integrate it in any blog kind site
-// ability to inspect html elems for quick updateing
 // ability to code custom components and extend the markdown

@@ -4,13 +4,12 @@ import hljs from "highlight.js";
 import { Marked } from "marked";
 
 
-import { useInputuStore } from "@/lib/store";
+import { useInputStore } from "@/lib/store";
 import { markedHighlight } from "marked-highlight";
 
 
-export default function Preview() {
-
-    const text = useInputuStore((state) => state.text);
+export default function Preview({markdown}) {
+    markdown = markdown ?? useInputStore((state) => state.markdown);
 
     const marked = new Marked(
         markedHighlight({
@@ -26,7 +25,7 @@ export default function Preview() {
     return <div className="preview-container w-full h-full flex justify-center">
         <div
             className="preview revert-tailwind"
-            dangerouslySetInnerHTML={{ __html: marked.parse(text) }}
+            dangerouslySetInnerHTML={{ __html: marked.parse(markdown) }}
         />
     </div>
 }

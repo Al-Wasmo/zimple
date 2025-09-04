@@ -23,7 +23,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className={`bg-[#22272e] ${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Nav />
-        <div className="mt-20"> {children} </div>
+        <div className="mt-[64px]"> {children} </div>
       </body>
     </html>
   );
